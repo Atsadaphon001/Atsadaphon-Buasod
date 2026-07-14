@@ -13,13 +13,12 @@ import {
   View,
 } from "react-native";
 
-// 1. ดึงข้อมูลจากไฟล์ products.json โดยตรง
+// ดึงข้อมูลจากไฟล์ products.json โดยตรง ไม่ต้องผ่าน Service ไฟล์อื่น
 import productsData from "../../products.json";
 
 const { width } = Dimensions.get("window");
 const COLUMN_WIDTH = (width - 44) / 2; 
 
-// 2. กำหนดประเภทข้อมูล Product ป้องกัน TypeScript Error
 interface Product {
   id: string;
   name: string;
@@ -46,13 +45,11 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 3. โหลดข้อมูลสินค้าเมื่อเปิดหน้าจอ
   useEffect(() => {
     setProducts(productsData as Product[]);
     setLoading(false);
   }, []);
 
-  // ฟังก์ชันช่วยกรองชื่อสินค้าตามช่องค้นหา
   const filteredProducts = products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -133,7 +130,7 @@ export default function HomeScreen() {
         ListHeaderComponent={<Text style={styles.sectionTitle}>แก้วยอดนิยม</Text>}
       />
 
-      {/* Bottom Navigation Link แบบไร้ขอบขาวซ้อนทับ */}
+      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={() => router.replace("/")}>
           <Ionicons name="compass" size={24} color={COLORS.accent} />
