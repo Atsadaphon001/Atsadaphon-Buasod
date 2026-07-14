@@ -7,6 +7,8 @@ import {
   FlatList,
   Image,
   Platform,
+  SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -14,32 +16,42 @@ import {
   View,
 } from "react-native";
 
-// ดึงข้อมูลจากไฟล์ products.json โดยตรง
-import productsData from "../../products.json";
-
-const { width } = Dimensions.get("window");
-const COLUMN_WIDTH = (width - 48) / 2; 
-
+// กำหนดประเภทข้อมูล Product ให้ยืดหยุ่น ป้องกัน Type Error แดงค้างหน้าจอ
 interface Product {
-  id: string;
-  name: string;
-  brand: string;
-  price: number;
-  image: string;
+  _id?: string;
+  id?: string;
+  name?: string;
+  brand?: string;
+  price?: string | number;
+  image?: string;
 }
 
-const COLORS = {
-  primary: "#0F172A",
-  accent: "#2563EB",
-  accentLight: "#DBEAFE",
-  background: "#F8FAFC",
-  surface: "#FFFFFF",
-  border: "#E2E8F0",
-  text: "#0F172A",
-  textSecondary: "#64748B",
-  saleTag: "#EF4444",
-  price: "#1E3A8A"
+const { width } = Dimensions.get("window");
+const COLUMN_WIDTH = (width - 44) / 2;
+
+const safeString = (value: unknown, fallback = ""): string => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
 };
+
+// 💎 เปลี่ยนคู่สีธีม Blue Ocean Premium ตามสไตล์ไอคอนและ Splash Screen ใน app.json ของคุณ
+const COLORS = {
+  primary: "#208AEF",       // สีน้ำเงินสว่างหลัก
+  accent: "#0064C8",        // สีน้ำเงินเข้มสำหรับราคา
+  background: "#F0F8FF",    // สีฟ้าอ่อนสบายตา
+  surface: "#FFFFFF",       // สีขาวพื้นหลังการ์ด
+  border: "#D0E7FF",        // เส้นขอบฟ้าพาสเทล
+  text: "#0F172A",          // สีตัวอักษรหลัก
+  textSecondary: "#64748B", // สีตัวอักษรรอง
+  tagBg: "#E6F4FE",         // ป้าย Best Seller ฟ้าจาง
+};
+
+const systemFont = Platform.select({
+  web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  ios: "System",
+  android: "Roboto",
+});
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -47,62 +59,120 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const navigateTo = (path: string, params?: Record<string, string>) => {
+    if (params) {
+      return router.push({ pathname: path as any, params } as any);
+    }
+    return router.push(path as any);
+  };
+
+  // 🌐 ดึงข้อมูลสดจาก Link GitHub JSON ของคุณโดยตรง
+  const GITHUB_JSON_URL =
+    "https://raw.githubusercontent.com/SupanutKU/MyProfileApp/main/src/app/data/products.json";
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    try {
+      const url = `${GITHUB_JSON_URL}?t=${Date.now()}`;
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = (await response.json()) as unknown;
+      const normalizedProducts: Product[] = Array.isArray(data)
+        ? data.map((item, index) => {
+            const product = (item ?? {}) as Product;
+            const fallbackId = String(index);
+            return {
+              _id: safeString(product._id, fallbackId),
+              id: safeString(product.id, fallbackId),
+              name: safeString(product.name, "Unnamed Product"),
+              brand: safeString(product.brand, "Unknown Brand"),
+              price: product.price ?? 0,
+              image: safeString(product.image, "https://via.placeholder.com/300x300?text=No+Image"),
+            };
+          })
+        : [];
+
+      setProducts(normalizedProducts);
+    } catch (err) {
+      setProducts([]);
+      console.log("Error fetching from GitHub:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setProducts(productsData as Product[]);
-    setLoading(false);
+    fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = products.filter((product) => {
+    const name = safeString(product.name).toLowerCase();
+    const brand = safeString(product.brand).toLowerCase();
+    const query = searchQuery.toLowerCase();
+    return name.includes(query) || brand.includes(query);
+  });
 
-  const renderProductItem = ({ item }: { item: Product }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      activeOpacity={0.9}
-      onPress={() => router.push(`/product/${item.id}`)}
-    >
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: item.image }} style={styles.productImage} />
-        <View style={styles.tagContainer}>
-          <Text style={styles.tagText}>Best Seller</Text>
-        </View>
-      </View>
-      
-      <View style={styles.cardContent}>
-        <Text style={styles.brandText}>{item.brand.toUpperCase()}</Text>
-        <Text style={styles.nameText} numberOfLines={2}>
-          {item.name}
-        </Text>
-        
-        <View style={styles.priceRow}>
-          <View>
-            <Text style={styles.currencyText}>฿<Text style={styles.priceText}>{item.price.toLocaleString()}</Text></Text>
+  const renderProductItem = ({ item }: { item: Product }) => {
+    const productName = safeString(item.name, "Unnamed Product");
+    const brandName = safeString(item.brand, "Unknown Brand");
+    const priceValue = Number(item.price ?? 0);
+    const imageUri = safeString(item.image, "https://via.placeholder.com/300x300?text=No+Image");
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: "/detail" as any,
+            params: {
+              id: safeString(item.id),
+              name: productName,
+              brand: brandName,
+              price: String(priceValue),
+              image: imageUri,
+            },
+          } as any)
+        }
+      >
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: imageUri }} style={styles.productImage} />
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagText}>Best Seller</Text>
           </View>
-          <TouchableOpacity 
-            style={styles.addButton}
-            onPress={() => router.push("/product")}
-          >
-            <Ionicons name="cart-outline" size={18} color={COLORS.surface} />
-          </TouchableOpacity>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.cardContent}>
+          <Text style={styles.brandText}>{brandName.toUpperCase()}</Text>
+          <Text style={styles.nameText} numberOfLines={2}>
+            {productName}
+          </Text>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.priceText}>฿{priceValue.toLocaleString()}</Text>
+            <View style={styles.addButton}>
+              <Ionicons name="cart-outline" size={16} color={COLORS.surface} />
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.accent} />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      {/* ส่วนหัวของแอป (Header) */}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <View>
@@ -110,17 +180,14 @@ export default function HomeScreen() {
             <Text style={styles.logoText}>ICE CRAFT</Text>
           </View>
           <View style={styles.headerRightIcons}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/finances")}>
-              <MaterialIcons name="analytics" size={24} color={COLORS.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/settings")}>
-              <Ionicons name="person-circle-outline" size={28} color={COLORS.primary} />
+            <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/categories" as any)}>
+              <MaterialIcons name="grid-view" size={24} color={COLORS.primary} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* ช่องค้นหาดีไซน์เรียบหรู (Search Bar) */}
+      {/* Search Bar & Add Button */}
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
           <Ionicons name="search-outline" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
@@ -131,19 +198,17 @@ export default function HomeScreen() {
             onChangeText={setSearchQuery}
             placeholderTextColor={COLORS.textSecondary}
           />
-          {searchQuery !== "" && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={18} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-          )}
         </View>
+        <TouchableOpacity style={styles.topAddButton} onPress={() => router.push("/add" as any)}>
+          <Text style={styles.topAddButtonText}>+ เพิ่ม</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* รายการแสดงผลสินค้า Grid แบบ 2 คอลัมน์ */}
+      {/* Product Grid */}
       <FlatList
         data={filteredProducts}
         renderItem={renderProductItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id ?? item._id ?? item.name ?? '')}
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContainer}
@@ -151,38 +216,26 @@ export default function HomeScreen() {
         ListHeaderComponent={<Text style={styles.sectionTitle}>แก้วยอดนิยมยอดฮิต ✨</Text>}
       />
 
-      {/* แถบเมนูด้านล่างสุด (Bottom Navigation) */}
+      {/* Bottom Navigation */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.replace("/")}>
-          <Ionicons name="compass" size={22} color={COLORS.accent} />
-          <Text style={[styles.navText, { color: COLORS.accent, fontWeight: "700" }]}>Explore</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/")}>
+          <Ionicons name="home" size={22} color={COLORS.primary} />
+          <Text style={[styles.navText, { color: COLORS.primary, fontWeight: "700" }]}>หน้าหลัก</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/product")}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/add" as any)}>
           <Ionicons name="add-circle-outline" size={22} color={COLORS.textSecondary} />
-          <Text style={styles.navText}>Add Product</Text>
+          <Text style={styles.navText}>เพิ่มสินค้า</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/finances")}>
-          <MaterialIcons name="analytics" size={22} color={COLORS.textSecondary} />
-          <Text style={styles.navText}>Finances</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/settings")}>
-          <Ionicons name="person-outline" size={22} color={COLORS.textSecondary} />
-          <Text style={styles.navText}>Profile</Text>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/categories" as any)}>
+          <Ionicons name="folder-open-outline" size={22} color={COLORS.textSecondary} />
+          <Text style={styles.navText}>หมวดหมู่</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
-
-// 🏢 ฟอนต์ครอบจักรวาลสากล ป้องกันฟอนต์ระบบระเบิดบนเบราว์เซอร์
-const systemFont = Platform.select({
-  web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  ios: "System",
-  android: "Roboto",
-});
 
 const styles = StyleSheet.create({
   container: {
@@ -197,7 +250,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: COLORS.surface,
-    paddingTop: 55,
+    paddingTop: Platform.OS === "ios" ? 10 : 20,
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
@@ -210,7 +263,7 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontFamily: systemFont,
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textSecondary,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -229,27 +282,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   iconButton: {
-    marginLeft: 18,
     padding: 4,
   },
   searchSection: {
+    flexDirection: "row",
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 10,
+    alignItems: "center",
   },
   searchBar: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.surface,
     borderRadius: 14,
     paddingHorizontal: 16,
-    height: 50,
+    height: 48,
     borderWidth: 1,
     borderColor: COLORS.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
   },
   searchIcon: {
     marginRight: 12,
@@ -257,20 +308,33 @@ const styles = StyleSheet.create({
   input: {
     fontFamily: systemFont,
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.text,
-    fontWeight: "500",
+  },
+  topAddButton: {
+    marginLeft: 10,
+    backgroundColor: COLORS.primary,
+    height: 48,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    justifyContent: "center",
+  },
+  topAddButtonText: {
+    fontFamily: systemFont,
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
   },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: 120, // ขยายระยะล่างสุดไม่ให้ทับกับเมนู
+    paddingBottom: 110,
   },
   sectionTitle: {
     fontFamily: systemFont,
     fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.primary,
-    marginTop: 15,
+    fontWeight: "800",
+    color: COLORS.text,
+    marginTop: 10,
     marginBottom: 16,
   },
   row: {
@@ -284,27 +348,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: "hidden",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
   },
   imageContainer: {
     width: "100%",
-    height: 170,
-    backgroundColor: "#F1F5F9",
+    height: 150,
+    backgroundColor: "#F8FAFC",
     position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
   },
   productImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
+    width: "85%",
+    height: "85%",
+    resizeMode: "contain",
   },
   tagContainer: {
     position: "absolute",
     top: 10,
     left: 10,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.tagBg,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -313,51 +375,43 @@ const styles = StyleSheet.create({
     fontFamily: systemFont,
     fontSize: 10,
     fontWeight: "700",
-    color: COLORS.surface,
-    textTransform: "uppercase",
+    color: COLORS.primary,
   },
   cardContent: {
-    padding: 14,
+    padding: 12,
   },
   brandText: {
     fontFamily: systemFont,
     fontSize: 10,
     fontWeight: "800",
-    color: COLORS.accent,
+    color: COLORS.primary,
     marginBottom: 4,
-    letterSpacing: 0.8,
   },
   nameText: {
     fontFamily: systemFont,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
     color: COLORS.text,
     height: 38,
     lineHeight: 19,
-    marginBottom: 10,
   },
   priceRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
-  },
-  currencyText: {
-    fontFamily: systemFont,
-    fontSize: 13,
-    fontWeight: "700",
-    color: COLORS.price,
+    marginTop: 8,
   },
   priceText: {
     fontFamily: systemFont,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "900",
+    color: COLORS.accent,
   },
   addButton: {
     backgroundColor: COLORS.primary,
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -366,30 +420,24 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 90, // ขยายเพิ่มความสูงให้ดูโปร่ง สบายตา กดง่ายขึ้น
+    height: 75,
     backgroundColor: COLORS.surface,
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingBottom: 28, // ดันไอคอนและข้อความขึ้นเพื่อไม่ให้ติดขอบล่าง
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
+    paddingBottom: Platform.OS === "ios" ? 15 : 0,
   },
   navItem: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flex: 1,
   },
   navText: {
     fontFamily: systemFont,
     fontSize: 11,
     color: COLORS.textSecondary,
-    fontWeight: "600",
+    fontWeight: "500",
     marginTop: 4,
   },
 });

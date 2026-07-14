@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "MyProfileAppNindam1",
-    "slug": "MyProfileAppNindam1",
+    "name": "MyProfileAppAtsadaporn",
+    "slug": "MyProfileAppAtsadaporn",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myprofileappnindam1",
+    "scheme": "myprofileappatsadaporn",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
