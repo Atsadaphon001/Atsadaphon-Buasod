@@ -1,6 +1,4 @@
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,433 +8,283 @@ import {
   StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-} from "react-native";
-
-// กำหนดประเภทข้อมูล Product ให้ยืดหยุ่น ป้องกัน Type Error แดงค้างหน้าจอ
+} from 'react-native';
+ 
+// 1. Define the TypeScript interface based on our JSON structure
 interface Product {
-  _id?: string;
-  id?: string;
-  name?: string;
-  brand?: string;
-  price?: string | number;
-  image?: string;
+  id: string;
+  name: string;
+  stock: number;
+  stock_text: string;
+  category: string;
+  location_count: number;
+  location_text: string;
+  badge_status: string;
+  image_url: string;
 }
 
-const safeString = (value: unknown, fallback = ""): string => {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  return fallback;
-};
-
-const COLORS = {
-  primary: "#20efcc",      
-  accent: "#0064C8",      
-  background: "#F0F8FF",    
-  surface: "#FFFFFF",     
-  border: "#D0E7FF",        
-  text: "#0F172A",          
-  textSecondary: "#64748B", 
-  tagBg: "#E6F4FE",        
-};
-
+// กำหนด System Font เพื่อช่วยให้ตัวอักษรแสดงผลได้คมชัดและสวยงามในทุกแพลตฟอร์ม
 const systemFont = Platform.select({
   web: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   ios: "System",
   android: "Roboto",
 });
-
-export default function HomeScreen() {
-  const router = useRouter();
+ 
+export default function ProductListScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const navigateTo = (path: string, params?: Record<string, string>) => {
-    if (params) {
-      return router.push({ pathname: path as any, params } as any);
-    }
-    return router.push(path as any);
-  };
-
-  // 🌐 ดึงข้อมูลสดจาก Link GitHub JSON ของคุณโดยตรง
-  const GITHUB_JSON_URL =
-    "https://raw.githubusercontent.com/Atsadaphon001/Atsadaphon-Buasod/refs/heads/master/src/app/data/products.json";
-
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const url = `${GITHUB_JSON_URL}?t=${Date.now()}`;
-      const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const data = (await response.json()) as unknown;
-      const normalizedProducts: Product[] = Array.isArray(data)
-        ? data.map((item, index) => {
-            const product = (item ?? {}) as Product;
-            const fallbackId = String(index);
-            return {
-              _id: safeString(product._id, fallbackId),
-              id: safeString(product.id, fallbackId),
-              name: safeString(product.name, "Unnamed Product"),
-              brand: safeString(product.brand, "Unknown Brand"),
-              price: product.price ?? 0,
-              image: safeString(product.image, "https://via.placeholder.com/300x300?text=No+Image"),
-            };
-          })
-        : [];
-
-      setProducts(normalizedProducts);
-    } catch (err) {
-      setProducts([]);
-      console.log("Error fetching from GitHub:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const [error, setError] = useState<string | null>(null);
+ 
+  // 2. Using your specific GitHub Raw URL
+  const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/Nindam-KU/nindam_product/main/sn_product.json';
+ 
   useEffect(() => {
     fetchProducts();
   }, []);
-
-  const filteredProducts = products.filter((product) => {
-    const name = safeString(product.name).toLowerCase();
-    const brand = safeString(product.brand).toLowerCase();
-    const query = searchQuery.toLowerCase();
-    return name.includes(query) || brand.includes(query);
-  });
-
-  const renderProductItem = ({ item }: { item: Product }) => {
-    const productName = safeString(item.name, "Unnamed Product");
-    const brandName = safeString(item.brand, "Unknown Brand");
-    const priceValue = Number(item.price ?? 0);
-    const imageUri = safeString(item.image, "https://via.placeholder.com/300x300?text=No+Image");
-
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.9}
-        onPress={() =>
-          router.push({
-            pathname: "/detail" as any,
-            params: {
-              id: safeString(item.id),
-              name: productName,
-              brand: brandName,
-              price: String(priceValue),
-              image: imageUri,
-            },
-          } as any)
-        }
-      >
-        {/* คอนเทนเนอร์รูปภาพ: ล็อกตำแหน่งกึ่งกลาง ย่อขนาดรูปภาพให้ฟิตตามเฟรมพอดี */}
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: imageUri }} style={styles.productImage} />
-          <View style={styles.tagContainer}>
-            <Text style={styles.tagText}>Best Seller</Text>
-          </View>
-        </View>
-
-        <View style={styles.cardContent}>
-          <Text style={styles.brandText}>{brandName.toUpperCase()}</Text>
-          <Text style={styles.nameText} numberOfLines={2}>
-            {productName}
-          </Text>
-
-          <View style={styles.priceRow}>
-            <Text style={styles.priceText}>฿{priceValue.toLocaleString()}</Text>
-            <View style={styles.addButton}>
-              <Ionicons name="cart-outline" size={16} color={COLORS.surface} />
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
+ 
+  const fetchProducts = async () => {
+    try {
+      // ดึงข้อมูลสดใหม่ทุกครั้ง ป้องกันปัญหาระบบ Cache ข้อมูลเก่าจาก GitHub
+      const url = `${GITHUB_JSON_URL}?t=${Date.now()}`;
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error('Failed to fetch data');
+      }
+      const data = await response.json();
+      setProducts(data);
+      setLoading(false);
+    } catch (err) {
+      setError((err as Error).message);
+      setLoading(false);
+    }
   };
-
-  if (loading) {
+ 
+  // 3. Render individual product cards
+  const renderItem = ({ item }: { item: Product }) => {
+    // ปรับการเปรียบเทียบข้อความให้ยืดหยุ่นด้วยการทำเป็นตัวพิมพ์เล็ก (Lowercase)
+    const badgeTextLower = (item.badge_status || '').toLowerCase();
+    const isLowStock = badgeTextLower === 'low in stock';
+    
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View>
-            <Text style={styles.welcomeText}>Welcome to</Text>
-            <Text style={styles.logoText}>ICE CRAFT</Text>
+      <View style={styles.cardContainer}>
+        {/* คอนเทนเนอร์รูปภาพ (ฝั่งซ้าย): ล็อกการย่อขยายภาพแบบ contain เพื่อความพอดีของกรอบสินค้า */}
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.image_url }}
+            style={styles.productImage}
+            resizeMode="contain" 
+          />
+          <Text style={styles.productTitle} numberOfLines={2}>
+            {item.name}
+          </Text>
+        </View>
+ 
+        {/* รายละเอียดสินค้า (ฝั่งขวา) */}
+        <View style={styles.detailsContainer}>
+          <View style={styles.infoBlock}>
+            <Text style={styles.detailText} numberOfLines={1}>
+              <Text style={styles.boldText}>Stock: </Text> {item.stock_text}
+            </Text>
+            <Text style={styles.detailText} numberOfLines={1}>
+              <Text style={styles.boldText}>Category: </Text> {item.category}
+            </Text>
+            <Text style={styles.detailText} numberOfLines={1}>
+              <Text style={styles.boldText}>Location: </Text> {item.location_text}
+            </Text>
           </View>
-          <View style={styles.headerRightIcons}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push("/categories" as any)}>
-              <MaterialIcons name="grid-view" size={24} color={COLORS.primary} />
+          
+          {/* แถวแสดงป้ายสถานะและปุ่มกด */}
+          <View style={styles.badgeRow}>
+            <View
+              style={[
+                styles.badge,
+                isLowStock ? styles.badgeLowStock : styles.badgeActive,
+              ]}
+            >
+              <Text style={styles.badgeText} numberOfLines={1}>
+                {item.badge_status}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.arrowButton} activeOpacity={0.7}>
+              <Text style={styles.arrowText}>›</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
-
-      {/* Search Bar & Add Button */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
-          <TextInput
-            style={styles.input}
-            placeholder="ค้นหาแก้วเก็บความเย็นพรีเมียม..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor={COLORS.textSecondary}
-          />
-        </View>
-        <TouchableOpacity style={styles.topAddButton} onPress={() => router.push("/add" as any)}>
-          <Text style={styles.topAddButtonText}>+ เพิ่ม</Text>
-        </TouchableOpacity>
+    );
+  };
+ 
+  // 4. Handle Loading and Error States
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#7B42F6" />
+        <Text style={styles.loadingText}>Loading products...</Text>
       </View>
-
-      {/* Product Grid */}
+    );
+  }
+ 
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+      </View>
+    );
+  }
+ 
+  // 5. Main UI Render
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>T-Shirts</Text>
+      </View>
+      
       <FlatList
-        data={filteredProducts}
-        renderItem={renderProductItem}
-        keyExtractor={(item) => String(item.id ?? item._id ?? item.name ?? '')}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
+        data={products}
+        keyExtractor={(item) => String(item.id)}
+        renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={<Text style={styles.sectionTitle}>แก้วยอดนิยมยอดฮิต ✨</Text>}
       />
-
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/")}>
-          <Ionicons name="home" size={22} color={COLORS.primary} />
-          <Text style={[styles.navText, { color: COLORS.primary, fontWeight: "700" }]}>หน้าหลัก</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/add" as any)}>
-          <Ionicons name="add-circle-outline" size={22} color={COLORS.textSecondary} />
-          <Text style={styles.navText}>เพิ่มสินค้า</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/categories" as any)}>
-          <Ionicons name="folder-open-outline" size={22} color={COLORS.textSecondary} />
-          <Text style={styles.navText}>หมวดหมู่</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
-
+ 
+// --- STYLES (ปรับปรุงเพื่อรองรับการแสดงผลที่สมมาตร 100%) ---
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
+  safeArea: { 
+    flex: 1, 
+    backgroundColor: '#F8F9FA' 
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
+  header: { 
+    paddingVertical: Platform.OS === 'ios' ? 12 : 18, 
+    alignItems: 'center', 
+    backgroundColor: '#FFFFFF', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#EEEEEE' 
   },
-  header: {
-    backgroundColor: COLORS.surface,
-    paddingTop: Platform.OS === "ios" ? 10 : 20,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  welcomeText: {
+  headerTitle: { 
     fontFamily: systemFont,
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: '#000000' 
   },
-  logoText: {
+  listContainer: { 
+    padding: 16,
+    paddingBottom: 40
+  },
+  cardContainer: { 
+    flexDirection: 'row', 
+    backgroundColor: '#FFFFFF', 
+    padding: 16, 
+    borderRadius: 14, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  imageContainer: { 
+    width: 100, // กำหนดความกว้างฝั่งรูปภาพและชื่อสินค้าให้คงที่
+    alignItems: 'center', 
+    marginRight: 16 
+  },
+  productImage: { 
+    width: 90, 
+    height: 90, 
+    borderRadius: 10, 
+    backgroundColor: '#F3F4F6', 
+    marginBottom: 8 
+  },
+  productTitle: { 
     fontFamily: systemFont,
-    fontSize: 24,
-    fontWeight: "900",
-    color: COLORS.primary,
-    letterSpacing: 0.5,
-    marginTop: 2,
+    fontSize: 13, 
+    fontWeight: '600', 
+    textAlign: 'center', 
+    color: '#1F2937',
+    lineHeight: 17
   },
-  headerRightIcons: {
-    flexDirection: "row",
-    alignItems: "center",
+  detailsContainer: { 
+    flex: 1, 
+    justifyContent: 'space-between',
+    paddingVertical: 2
   },
-  iconButton: {
-    padding: 4,
+  infoBlock: {
+    justifyContent: 'flex-start'
   },
-  searchSection: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    alignItems: "center",
-  },
-  searchBar: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    height: 48,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  searchIcon: {
-    marginRight: 12,
-  },
-  input: {
+  detailText: { 
     fontFamily: systemFont,
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.text,
+    fontSize: 13, 
+    color: '#4B5563', 
+    marginBottom: 4 
   },
-  topAddButton: {
-    marginLeft: 10,
-    backgroundColor: COLORS.primary,
-    height: 48,
-    paddingHorizontal: 16,
-    borderRadius: 14,
-    justifyContent: "center",
+  boldText: { 
+    fontWeight: '700', 
+    color: '#111827' 
   },
-  topAddButtonText: {
+  badgeRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    marginTop: 8 
+  },
+  badge: { 
+    flex: 1, // ปรับให้ป้ายสถานะยืดหยุ่นตามความยาวของข้อความอัตโนมัติ ไม่บีบกรอบ
+    paddingVertical: 6, 
+    paddingHorizontal: 12, 
+    borderRadius: 20, 
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  badgeActive: { 
+    backgroundColor: '#A855F7' 
+  },
+  badgeLowStock: { 
+    backgroundColor: '#EF4444' // สลับป้ายเตือนเป็นสีแดง (สีสากล) เพื่อเพิ่มความชัดเจนในการตรวจสอบ
+  },
+  badgeText: { 
     fontFamily: systemFont,
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
+    color: '#FFFFFF', 
+    fontSize: 11, 
+    fontWeight: 'bold' 
   },
-  listContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 110,
+  arrowButton: { 
+    width: 26, 
+    height: 26, 
+    borderRadius: 13, 
+    backgroundColor: '#F3E8FF', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
   },
-  sectionTitle: {
+  arrowText: { 
+    color: '#A855F7', 
+    fontWeight: 'bold', 
+    fontSize: 16, 
+    lineHeight: 18,
+    textAlign: 'center'
+  },
+  separator: { 
+    height: 14 
+  },
+  centerContainer: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#F8F9FA' 
+  },
+  loadingText: { 
     fontFamily: systemFont,
-    fontSize: 18,
-    fontWeight: "800",
-    color: COLORS.text,
-    marginTop: 10,
-    marginBottom: 16,
+    marginTop: 10, 
+    color: '#6B7280' 
   },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  card: {
-    flex: 1,                     // ✨ ปรับการ์ดให้แชร์พื้นที่เท่ากัน 
-    maxWidth: "48%",             // ✨ บังคับความกว้างไม่ให้ล้นออกนอกจอเบราว์เซอร์
-    backgroundColor: COLORS.surface,
-    borderRadius: 18,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: "hidden",
-  },
-  imageContainer: {
-    width: "100%",
-    height: 150,
-    backgroundColor: "#F8FAFC",
-    position: "relative",
-    justifyContent: "center",    // ✨ บังคับรูปให้อยู่ตรงกลางแนวดิ่ง
-    alignItems: "center",        // ✨ บังคับรูปให้อยู่ตรงกลางแนวราบ
-    padding: 10,                 // ✨ เว้นระยะขอบไม่ให้รูปชนขอบกรอบ
-  },
-  productImage: {
-    width: "100%",               // ✨ รูปขยายได้เต็มที่ของกรอบ
-    height: "100%",
-    resizeMode: "contain",       // ✨ ย่อส่วนรูปให้พอดีกรอบอย่างสมบูรณ์ ไม่แหว่งไม่ยืด
-  },
-  tagContainer: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    backgroundColor: COLORS.tagBg,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  tagText: {
+  errorText: { 
     fontFamily: systemFont,
-    fontSize: 10,
-    fontWeight: "700",
-    color: COLORS.primary,
-  },
-  cardContent: {
-    padding: 12,
-  },
-  brandText: {
-    fontFamily: systemFont,
-    fontSize: 10,
-    fontWeight: "800",
-    color: COLORS.primary,
-    marginBottom: 4,
-  },
-  nameText: {
-    fontFamily: systemFont,
-    fontSize: 14,
-    fontWeight: "700",
-    color: COLORS.text,
-    height: 38,
-    lineHeight: 19,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
-  },
-  priceText: {
-    fontFamily: systemFont,
-    fontSize: 16,
-    fontWeight: "900",
-    color: COLORS.accent,
-  },
-  addButton: {
-    backgroundColor: COLORS.primary,
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomNav: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 75,
-    backgroundColor: COLORS.surface,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingBottom: Platform.OS === "ios" ? 15 : 0,
-  },
-  navItem: {
-    alignItems: "center",
-    flex: 1,
-  },
-  navText: {
-    fontFamily: systemFont,
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: "500",
-    marginTop: 4,
+    color: '#EF4444', 
+    fontSize: 16 
   },
 });
