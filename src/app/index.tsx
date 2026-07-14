@@ -111,52 +111,54 @@ export default function HomeScreen() {
     const query = searchQuery.toLowerCase();
     return name.includes(query) || brand.includes(query);
   });
-const renderProductItem = ({ item }: { item: Product }) => (
-  <TouchableOpacity
-    style={styles(COLORS).card}
-    activeOpacity={0.9}
-    onPress={() =>
-      router.push({
-        pathname: "/detail",
-        params: {
-          id: item.id,
-          name: item.name,
-          brand: item.brand,
-          price: String(item.price),
-          image: item.image,
-        },
-      })
-    }
-  >
-    {/* imageContainer ปรับปรุงใหม่ให้ล็อกรูปอยู่ตรงกลาง */}
-    <View style={styles(COLORS).imageContainer}>
-      {item.image ? (
-        <Image source={{ uri: item.image }} style={styles(COLORS).productImage} />
-      ) : (
-        <Ionicons name="image-outline" size={40} color={COLORS.textSecondary} />
-      )}
-      <View style={styles(COLORS).tagContainer}>
-        <Text style={styles(COLORS).tagText}>Best Seller</Text>
-      </View>
-    </View>
 
-    <View style={styles(COLORS).cardContent}>
-      <Text style={styles(COLORS).brandText}>{item.brand.toUpperCase()}</Text>
-      <Text style={styles(COLORS).nameText} numberOfLines={2}>
-        {item.name}
-      </Text>
+  const renderProductItem = ({ item }: { item: Product }) => {
+    const productName = safeString(item.name, "Unnamed Product");
+    const brandName = safeString(item.brand, "Unknown Brand");
+    const priceValue = Number(item.price ?? 0);
+    const imageUri = safeString(item.image, "https://via.placeholder.com/300x300?text=No+Image");
 
-      <View style={styles(COLORS).priceRow}>
-        <Text style={styles(COLORS).priceText}>
-          ฿{Number(item.price).toLocaleString()}
-        </Text>
-        <View style={styles(COLORS).cartButton}>
-          <Ionicons name="cart-outline" size={15} color="#fff" />
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.9}
+        onPress={() =>
+          router.push({
+            pathname: "/detail" as any,
+            params: {
+              id: safeString(item.id),
+              name: productName,
+              brand: brandName,
+              price: String(priceValue),
+              image: imageUri,
+            },
+          } as any)
+        }
+      >
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: imageUri }} style={styles.productImage} />
+          <View style={styles.tagContainer}>
+            <Text style={styles.tagText}>Best Seller</Text>
+          </View>
         </View>
-      </View>
-    </View>
-  </TouchableOpacity>
-);
+
+        <View style={styles.cardContent}>
+          <Text style={styles.brandText}>{brandName.toUpperCase()}</Text>
+          <Text style={styles.nameText} numberOfLines={2}>
+            {productName}
+          </Text>
+
+          <View style={styles.priceRow}>
+            <Text style={styles.priceText}>฿{priceValue.toLocaleString()}</Text>
+            <View style={styles.addButton}>
+              <Ionicons name="cart-outline" size={16} color={COLORS.surface} />
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
