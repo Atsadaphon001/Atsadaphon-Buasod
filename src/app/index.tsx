@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   Platform,
@@ -25,9 +24,6 @@ interface Product {
   price?: string | number;
   image?: string;
 }
-
-const { width } = Dimensions.get("window");
-const COLUMN_WIDTH = (width - 44) / 2;
 
 const safeString = (value: unknown, fallback = ""): string => {
   if (typeof value === "string") return value;
@@ -135,6 +131,7 @@ export default function HomeScreen() {
           } as any)
         }
       >
+        {/* คอนเทนเนอร์รูปภาพ: ล็อกตำแหน่งกึ่งกลาง ย่อขนาดรูปภาพให้ฟิตตามเฟรมพอดี */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: imageUri }} style={styles.productImage} />
           <View style={styles.tagContainer}>
@@ -337,10 +334,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   row: {
+    flexDirection: "row",
     justifyContent: "space-between",
   },
   card: {
-    width: COLUMN_WIDTH,
+    flex: 1,                     // ✨ ปรับการ์ดให้แชร์พื้นที่เท่ากัน 
+    maxWidth: "48%",             // ✨ บังคับความกว้างไม่ให้ล้นออกนอกจอเบราว์เซอร์
     backgroundColor: COLORS.surface,
     borderRadius: 18,
     marginBottom: 16,
@@ -353,13 +352,14 @@ const styles = StyleSheet.create({
     height: 150,
     backgroundColor: "#F8FAFC",
     position: "relative",
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: "center",    // ✨ บังคับรูปให้อยู่ตรงกลางแนวดิ่ง
+    alignItems: "center",        // ✨ บังคับรูปให้อยู่ตรงกลางแนวราบ
+    padding: 10,                 // ✨ เว้นระยะขอบไม่ให้รูปชนขอบกรอบ
   },
   productImage: {
-    width: "85%",
-    height: "85%",
-    resizeMode: "contain",
+    width: "100%",               // ✨ รูปขยายได้เต็มที่ของกรอบ
+    height: "100%",
+    resizeMode: "contain",       // ✨ ย่อส่วนรูปให้พอดีกรอบอย่างสมบูรณ์ ไม่แหว่งไม่ยืด
   },
   tagContainer: {
     position: "absolute",
