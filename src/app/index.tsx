@@ -37,7 +37,7 @@ const safeString = (value: unknown, fallback = ""): string => {
 
 // 💎 เปลี่ยนคู่สีธีม Blue Ocean Premium ตามสไตล์ไอคอนและ Splash Screen ใน app.json ของคุณ
 const COLORS = {
-  primary: "#20ef57",      
+  primary: "#20efcc",      
   accent: "#0064C8",      
   background: "#F0F8FF",    
   surface: "#FFFFFF",     
