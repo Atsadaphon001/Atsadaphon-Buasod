@@ -37,14 +37,14 @@ const safeString = (value: unknown, fallback = ""): string => {
 
 // 💎 เปลี่ยนคู่สีธีม Blue Ocean Premium ตามสไตล์ไอคอนและ Splash Screen ใน app.json ของคุณ
 const COLORS = {
-  primary: "#208AEF",       // สีน้ำเงินสว่างหลัก
-  accent: "#0064C8",        // สีน้ำเงินเข้มสำหรับราคา
-  background: "#F0F8FF",    // สีฟ้าอ่อนสบายตา
-  surface: "#FFFFFF",       // สีขาวพื้นหลังการ์ด
-  border: "#D0E7FF",        // เส้นขอบฟ้าพาสเทล
-  text: "#0F172A",          // สีตัวอักษรหลัก
-  textSecondary: "#64748B", // สีตัวอักษรรอง
-  tagBg: "#E6F4FE",         // ป้าย Best Seller ฟ้าจาง
+  primary: "#20ef57",      
+  accent: "#0064C8",      
+  background: "#F0F8FF",    
+  surface: "#FFFFFF",     
+  border: "#D0E7FF",        
+  text: "#0F172A",          
+  textSecondary: "#64748B", 
+  tagBg: "#E6F4FE",        
 };
 
 const systemFont = Platform.select({
@@ -68,7 +68,7 @@ export default function HomeScreen() {
 
   // 🌐 ดึงข้อมูลสดจาก Link GitHub JSON ของคุณโดยตรง
   const GITHUB_JSON_URL =
-    "https://raw.githubusercontent.com/SupanutKU/MyProfileApp/main/src/app/data/products.json";
+    "https://raw.githubusercontent.com/Atsadaphon001/Atsadaphon-Buasod/refs/heads/master/src/app/data/products.json";
 
   const fetchProducts = async () => {
     setLoading(true);
